@@ -1,12 +1,12 @@
 import streamlit as st
-import sys
-import os
-
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from backend.db_connect import get_connection
 import pandas as pd
+import plotly.express as px
+from backend.generate_edt import generate_exam_schedule
 
+st.set_page_config(page_title="Plateforme EDT", layout="wide")
+
+# Session
 if 'login' not in st.session_state:
     st.session_state['login'] = False
     st.session_state['role'] = ''
@@ -38,32 +38,48 @@ if not st.session_state['login']:
     st.title("Connexion à la plateforme")
     login()
 else:
-    st.title(f"Dashboard {st.session_state['role']}")
     role = st.session_state['role']
+    st.title(f"Dashboard {role}")
     conn = get_connection()
     cur = conn.cursor()
-    if role == 'doyen':
-        st.subheader("Statistiques globales")
-        cur.execute("SELECT COUNT(*) FROM salles")
-        st.write("Nombre de salles :", cur.fetchone()[0])
-        cur.execute("SELECT COUNT(*) FROM examens")
-        st.write("Nombre d'examens :", cur.fetchone()[0])
-    elif role == 'admin':
-        st.subheader("Génération EDT")
+
+    if role == 'admin':
+        st.subheader("Génération de l'emploi du temps")
         if st.button("Générer EDT"):
-            from backend.generate_edt import generate_exam_schedule
             generate_exam_schedule()
+            st.success("EDT généré !")
+        st.subheader("Prévisualiser l'emploi du temps")
+        cur.execute("SELECT e.date_exam, m.nom AS module, s.nom AS salle FROM examens e JOIN modules m ON e.module_id = m.id JOIN salles s ON e.salle_id = s.id")
+        df = pd.DataFrame(cur.fetchall(), columns=["Date","Module","Salle"])
+        st.dataframe(df)
+
     elif role == 'chefdep':
-        st.subheader("Statistiques par département")
-        cur.execute("SELECT COUNT(*) FROM formations")
-        st.write("Nombre de formations :", cur.fetchone()[0])
+        st.subheader("Validation EDT département")
+        cur.execute("SELECT e.date_exam, m.nom AS module, s.nom AS salle FROM examens e JOIN modules m ON e.module_id = m.id JOIN salles s ON e.salle_id = s.id LIMIT 20")
+        df = pd.DataFrame(cur.fetchall(), columns=["Date","Module","Salle"])
+        st.dataframe(df)
+        if st.button("Confirmer EDT département"):
+            st.success("EDT confirmé, envoyé au doyen")
+
+    elif role == 'doyen':
+        st.subheader("Validation finale et statistiques")
+        cur.execute("SELECT e.date_exam, m.nom AS module, s.nom AS salle FROM examens e JOIN modules m ON e.module_id = m.id JOIN salles s ON e.salle_id = s.id")
+        df = pd.DataFrame(cur.fetchall(), columns=["Date","Module","Salle"])
+        st.dataframe(df)
+        fig = px.bar(df, x="Date", y="Module", title="Nombre d'examens par date")
+        st.plotly_chart(fig)
+
     elif role == 'professeur':
         st.subheader("Mes examens")
-        cur.execute("SELECT * FROM examens LIMIT 5")
-        st.write(pd.DataFrame(cur.fetchall()))
+        cur.execute("SELECT e.date_exam, m.nom AS module, s.nom AS salle FROM examens e JOIN modules m ON e.module_id = m.id JOIN salles s ON e.salle_id = s.id LIMIT 10")
+        df = pd.DataFrame(cur.fetchall(), columns=["Date","Module","Salle"])
+        st.dataframe(df)
+
     elif role == 'etudiant':
         st.subheader("Mon planning")
-        cur.execute("SELECT * FROM examens LIMIT 5")
-        st.write(pd.DataFrame(cur.fetchall()))
+        cur.execute("SELECT e.date_exam, m.nom AS module, s.nom AS salle FROM examens e JOIN modules m ON e.module_id = m.id JOIN salles s ON e.salle_id = s.id LIMIT 10")
+        df = pd.DataFrame(cur.fetchall(), columns=["Date","Module","Salle"])
+        st.dataframe(df)
+
     cur.close()
     conn.close()
