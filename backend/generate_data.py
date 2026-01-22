@@ -1,4 +1,4 @@
-from backend.db_connect import get_connection
+from .db_connect import get_connection
 import random
 
 def generate_data():

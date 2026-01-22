@@ -1,4 +1,4 @@
-from db_connect import get_connection
+from .db_connect import get_connection
 from datetime import datetime, timedelta
 import random
 
