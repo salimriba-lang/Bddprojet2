@@ -1,5 +1,5 @@
 import os
-import pg8000.native
+import pg8000
 from urllib.parse import urlparse
 
 def get_connection():
@@ -9,23 +9,21 @@ def get_connection():
             "DATABASE_URL non défini. Vérifie tes variables d'environnement Railway."
         )
 
-    # Parse l'URL
     result = urlparse(DATABASE_URL)
     user = result.username
     password = result.password
     host = result.hostname
     port = result.port
-    database = result.path[1:]  # enlever le /
+    database = result.path[1:]
 
-    # Connexion pg8000 avec SSL sans vérification
-    conn = pg8000.native.Connection(
+    # Utiliser pg8000.connect() (DBAPI) avec SSL
+    conn = pg8000.connect(
         user=user,
         password=password,
         host=host,
         port=port,
         database=database,
-        ssl=True,
-        ssl_verify=False  # <- ignore le certificat self-signed
+        ssl_context=False  # <-- ignore les certificats auto-signés
     )
 
     return conn
