@@ -1,29 +1,31 @@
 import os
-from urllib.parse import urlparse
 import pg8000.native
-import ssl
+from urllib.parse import urlparse
 
 def get_connection():
     DATABASE_URL = os.environ.get("DATABASE_URL")
     if not DATABASE_URL:
-        raise Exception("DATABASE_URL non défini. Vérifie tes variables d'environnement Railway.")
+        raise Exception(
+            "DATABASE_URL non défini. Vérifie tes variables d'environnement Railway."
+        )
 
+    # Parse l'URL
     result = urlparse(DATABASE_URL)
-    username = result.username
+    user = result.username
     password = result.password
-    database = result.path[1:]
-    hostname = result.hostname
+    host = result.hostname
     port = result.port
+    database = result.path[1:]  # enlever le /
 
-    # SSL requis pour Railway
-    ssl_context = ssl.create_default_context()
-
+    # Connexion pg8000 avec SSL sans vérification
     conn = pg8000.native.Connection(
-        user=username,
+        user=user,
         password=password,
-        host=hostname,
+        host=host,
         port=port,
         database=database,
-        ssl_context=ssl_context
+        ssl=True,
+        ssl_verify=False  # <- ignore le certificat self-signed
     )
+
     return conn
