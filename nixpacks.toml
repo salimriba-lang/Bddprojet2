@@ -1,5 +1,5 @@
 [phases.install]
 cmds = [
   "pip install --upgrade pip",
-  "pip install -r requirementsnews.txt"
+  "pip install -r requirements.txt"
 ]
